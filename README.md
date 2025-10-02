@@ -1,110 +1,142 @@
-# CoinGuard
-Digital Asset Risk Analytics that based on XGBoost, 我们将开源给所有热爱机器学习的加密货币人士。
+# CoinGuard: Open-source Financial ML for Digital Asset Risk
 
-## 特征工程
+English | [简体中文](README.zh-CN.md)
 
-### Top 20 特征重要性
+CoinGuard is an open-source financial machine learning project for digital asset risk analytics. It detects high-risk scenarios in crypto markets using engineered market microstructure and technical indicators, trained with XGBoost on temporally split data. The project aims for clarity, reproducibility, and practical deployment as a research baseline or production component.
 
-| 排名 | 特征名称 | 中文名称 | 重要性 | 特征类型 |
-|------|---------|----------|--------|----------|
-| 1 | BBB_20_2.0 | 布林带宽度 | 0.1420 | 技术指标 |
-| 2 | number_of_trades | 交易笔数 | 0.0793 | 成交量特征 |
-| 3 | RSI | 相对强弱指数 | 0.0601 | 技术指标 |
-| 4 | BBP_20_2.0 | 布林带位置 | 0.0401 | 技术指标 |
-| 5 | BBL_20_2.0 | 布林带下轨 | 0.0374 | 技术指标 |
-| 6 | return_1h | 1小时收益率 | 0.0352 | 价格特征 |
-| 7 | log_return_1h | 1小时对数收益率 | 0.0346 | 价格特征 |
-| 8 | lag_return_1h | 滞后1小时收益率 | 0.0281 | 滞后特征 |
-| 9 | MACDh_12_26_9 | MACD柱状图 | 0.0265 | 技术指标 |
-| 10 | BBM_20_2.0 | 布林带中轨 | 0.0252 | 技术指标 |
-| 11 | rolling_mean_close_24h | 24小时收盘价均值 | 0.0226 | 滚动特征 |
-| 12 | quote_asset_volume | 计价资产成交量 | 0.0226 | 成交量特征 |
-| 13 | BBU_20_2.0 | 布林带上轨 | 0.0225 | 技术指标 |
-| 14 | ATR | 平均真实波幅 | 0.0223 | 技术指标 |
-| 15 | lag_return_2h | 滞后2小时收益率 | 0.0218 | 滞后特征 |
-| 16 | rolling_mean_close_6h | 6小时收盘价均值 | 0.0204 | 滚动特征 |
-| 17 | rolling_mean_close_12h | 12小时收盘价均值 | 0.0202 | 滚动特征 |
-| 18 | taker_buy_quote_asset_volume | 主动买入成交量 | 0.0201 | 成交量特征 |
-| 19 | rolling_std_close_12h | 12小时收盘价标准差 | 0.0199 | 滚动特征 |
-| 20 | lag_return_3h | 滞后3小时收益率 | 0.0193 | 滞后特征 |
+## Key Features
 
-### 特征工程说明
+- Robust data pipeline with symbol discovery and OHLCV aggregation
+- Rich feature engineering: returns, volatility, rolling stats, TA indicators (RSI, MACD, Bollinger Bands, ATR)
+- Time-aware target creation and temporal splits to prevent leakage
+- Class imbalance handling via `scale_pos_weight`
+- Hyperparameter search on validation ROC AUC
+- Clear evaluation with confusion matrix, classification report, and AUC-ROC
 
-本项目构建了以下类型的特征：
+## Repository Structure
 
-- **价格特征**: 收益率、对数收益率等
-- **成交量特征**: 交易笔数、成交量变化等  
-- **技术指标**: RSI、MACD、布林带、ATR等
-- **滞后特征**: 过去1-12小时的历史数据
-- **滚动特征**: 不同时间窗口的统计量
+- `download.py`: Fetches symbols, 1h klines, and long/short ratios, merges into `data/crypto_klines_data.csv`.
+- `feature_engineering.py`: Builds features and saves `data/features_crypto_data.csv`.
+- `train_model.py`: Creates target, splits temporally, tunes and trains XGBoost, evaluates, and plots top-20 feature importance.
+- `data/`: CSV artifacts.
+- `reports/`: Experiment logs and notes.
 
+## Quickstart
 
-## 项目进程
-
-1. 定义风险：未来6小时内下跌超过30%。
-
-2. 获取数据： 数据的下载及获取。
-
-3. 特征工程：使用pandas-ta库，计算至少20-30个技术指标作为特征。
-
-4. 数据划分：严格按照时间顺序划分训练集和验证集。
-
-5. 模型训练：使用XGBoost训练一个二元分类器。
-
-6. 模型评估：重点关注召回率和PR曲线。
-
-## 数据来源
-
-1. 合约交易对信息：https://api.lewiszhang.top/ticker/24hr
-2. 具体合约K线数据信息：https://api.lewiszhang.top/klines?symbol=BTCUSDT&interval=1h&limit=1000
-
-```json
-// 返回交易对数据结构
-[
-  {
-    "symbol": "AIXBTUSDT",
-    "priceChange": "0.0097300",
-    "priceChangePercent": "10.906",
-    "weightedAvgPrice": "0.0951559",
-    "lastPrice": "0.0989500",
-    "lastQty": "167",
-    "openPrice": "0.0892200",
-    "highPrice": "0.0990900",
-    "lowPrice": "0.0891500",
-    "volume": "177441310",
-    "quoteVolume": "16884589.0841700",
-    "openTime": 1759301820000,
-    "closeTime": 1759388262018,
-    "firstId": 258223370,
-    "lastId": 258434365,
-    "count": 210994
-  }
-  ...
-]
-// 返回K线数据结构
-[
-  [
-    1755788400000,
-    "113231.90",
-    "113346.00",
-    "112545.40",
-    "112748.90",
-    "7958.046",
-    1755791999999,
-    "898214862.02060",
-    191458,
-    "3694.408",
-    "417022736.97130",
-    "0"
-  ]
-  ...
-]
-```
-
-数据下载的执行：
+1) Environment
 
 ```bash
-python datasource/download.py 
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-* 数据大约在65M左右
+Requirements: Python 3.10+
+
+2) Download market data
+
+```bash
+python download.py
+```
+
+3) Build features
+
+```bash
+python feature_engineering.py
+```
+
+4) Train and evaluate
+
+```bash
+python train_model.py
+```
+
+Outputs include console metrics and a feature-importance plot.
+
+## Compute Budget
+
+You can trade off speed, cost, and accuracy via these knobs:
+
+- Hyperparameter search budget: `CONFIG["tuning"]["max_combinations"]` in `train_model.py` (lower = faster/cheaper)
+- Model size/training time: reduce `n_estimators`, `max_depth`, or increase `learning_rate`
+- Evaluation overhead: keep `thresholds_to_test` short
+- Data volume: limit downloaded symbols or rows before feature engineering (smaller datasets train faster)
+
+For quick iterations, start with a small `max_combinations` (e.g., 10–20) and moderate `n_estimators` (e.g., 800), then scale up.
+
+## Data Sources
+
+- Tickers: `https://api.lewiszhang.top/ticker/24hr`
+- Klines: `https://api.lewiszhang.top/klines?symbol=BTCUSDT&interval=1h&limit=1000`
+- Long/Short Account Ratio: `https://api.lewiszhang.top/topLongShortAccountRatio`
+- Long/Short Position Ratio: `https://api.lewiszhang.top/topLongShortPositionRatio`
+
+## Model Configuration (default)
+
+- Algorithm: XGBoost binary classifier
+- Lookahead horizon: 1 hour
+- Risk definition: next-hour drop worse than −10%
+- Validation metric: ROC AUC
+- Threshold for classification: 0.6 (configurable)
+
+See `CONFIG` in `train_model.py` to adjust parameters.
+
+## Evaluation Results (example)
+
+From a representative run (threshold = 0.6):
+
+- Accuracy: 0.9935
+- AUC-ROC: 0.9545
+- Confusion Matrix (rows = true, cols = pred):
+
+```
+[[56386   282]
+ [   89    60]]
+```
+
+- Class Report (precision / recall / f1 / support)
+  - Class 0 (Low risk): 0.9984 / 0.9950 / 0.9967 / 56668
+  - Class 1 (High risk): 0.1754 / 0.4027 / 0.2444 / 149
+
+Notes
+
+- This is a highly imbalanced classification problem; recall/precision trade-offs are controlled by the decision threshold.
+- Lower thresholds generally increase recall (catch more risks) at the cost of precision (more false alarms).
+
+## Top-20 Feature Importance (example)
+
+The training script plots and prints the top-20 features by importance. Typical high-impact features include:
+
+- `BBB_20_2.0` (Bollinger Band width)
+- `number_of_trades`
+- `RSI`
+- `BBP_20_2.0` (Bollinger Band position)
+- `BBL_20_2.0` / `BBM_20_2.0` / `BBU_20_2.0`
+- `return_1h`, `log_return_1h`, `lag_return_*h`
+- Rolling means and volatilities of `close`
+
+Run `train_model.py` to regenerate the plot for your dataset and configuration.
+
+## Reproducibility & Compliance
+
+- Temporal splits and target creation are symbol-aware and avoid lookahead leakage.
+- Random seed is fixed in model defaults for repeatability.
+- This repository is for research and educational purposes only and does not constitute financial advice.
+- Ensure compliance with your jurisdiction’s regulations and data provider terms of service.
+
+## Security & Safety
+
+- APIs are public endpoints; avoid committing secrets.
+- Review and sandbox any downstream trading logic—this project is purely analytical.
+- Validate data integrity before training; unexpected schema changes may break pipelines.
+
+## Contributing
+
+Contributions are welcome! Please:
+
+- Open an issue to discuss substantial changes.
+- Follow clear commit messages and include before/after metrics when relevant.
+- Add tests or runnable examples where appropriate.
+
+## License
+
+This project is released under the terms of the license in `LICENSE`.
