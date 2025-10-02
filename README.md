@@ -1,5 +1,42 @@
 # CoinGuard
-Digital Asset Risk Analytics that based on XGBoost 
+Digital Asset Risk Analytics that based on XGBoost, 我们将开源给所有热爱机器学习的加密货币人士。
+
+## 特征工程
+
+### Top 20 特征重要性
+
+| 排名 | 特征名称 | 中文名称 | 重要性 | 特征类型 |
+|------|---------|----------|--------|----------|
+| 1 | BBB_20_2.0 | 布林带宽度 | 0.1420 | 技术指标 |
+| 2 | number_of_trades | 交易笔数 | 0.0793 | 成交量特征 |
+| 3 | RSI | 相对强弱指数 | 0.0601 | 技术指标 |
+| 4 | BBP_20_2.0 | 布林带位置 | 0.0401 | 技术指标 |
+| 5 | BBL_20_2.0 | 布林带下轨 | 0.0374 | 技术指标 |
+| 6 | return_1h | 1小时收益率 | 0.0352 | 价格特征 |
+| 7 | log_return_1h | 1小时对数收益率 | 0.0346 | 价格特征 |
+| 8 | lag_return_1h | 滞后1小时收益率 | 0.0281 | 滞后特征 |
+| 9 | MACDh_12_26_9 | MACD柱状图 | 0.0265 | 技术指标 |
+| 10 | BBM_20_2.0 | 布林带中轨 | 0.0252 | 技术指标 |
+| 11 | rolling_mean_close_24h | 24小时收盘价均值 | 0.0226 | 滚动特征 |
+| 12 | quote_asset_volume | 计价资产成交量 | 0.0226 | 成交量特征 |
+| 13 | BBU_20_2.0 | 布林带上轨 | 0.0225 | 技术指标 |
+| 14 | ATR | 平均真实波幅 | 0.0223 | 技术指标 |
+| 15 | lag_return_2h | 滞后2小时收益率 | 0.0218 | 滞后特征 |
+| 16 | rolling_mean_close_6h | 6小时收盘价均值 | 0.0204 | 滚动特征 |
+| 17 | rolling_mean_close_12h | 12小时收盘价均值 | 0.0202 | 滚动特征 |
+| 18 | taker_buy_quote_asset_volume | 主动买入成交量 | 0.0201 | 成交量特征 |
+| 19 | rolling_std_close_12h | 12小时收盘价标准差 | 0.0199 | 滚动特征 |
+| 20 | lag_return_3h | 滞后3小时收益率 | 0.0193 | 滞后特征 |
+
+### 特征工程说明
+
+本项目构建了以下类型的特征：
+
+- **价格特征**: 收益率、对数收益率等
+- **成交量特征**: 交易笔数、成交量变化等  
+- **技术指标**: RSI、MACD、布林带、ATR等
+- **滞后特征**: 过去1-12小时的历史数据
+- **滚动特征**: 不同时间窗口的统计量
 
 
 ## 项目进程
@@ -12,6 +49,62 @@ Digital Asset Risk Analytics that based on XGBoost
 
 4. 数据划分：严格按照时间顺序划分训练集和验证集。
 
-5. 模型训练：使用LightGBM或XGBoost训练一个二元分类器。
+5. 模型训练：使用XGBoost训练一个二元分类器。
 
 6. 模型评估：重点关注召回率和PR曲线。
+
+## 数据来源
+
+1. 合约交易对信息：https://api.lewiszhang.top/ticker/24hr
+2. 具体合约K线数据信息：https://api.lewiszhang.top/klines?symbol=BTCUSDT&interval=1h&limit=1000
+
+```json
+// 返回交易对数据结构
+[
+  {
+    "symbol": "AIXBTUSDT",
+    "priceChange": "0.0097300",
+    "priceChangePercent": "10.906",
+    "weightedAvgPrice": "0.0951559",
+    "lastPrice": "0.0989500",
+    "lastQty": "167",
+    "openPrice": "0.0892200",
+    "highPrice": "0.0990900",
+    "lowPrice": "0.0891500",
+    "volume": "177441310",
+    "quoteVolume": "16884589.0841700",
+    "openTime": 1759301820000,
+    "closeTime": 1759388262018,
+    "firstId": 258223370,
+    "lastId": 258434365,
+    "count": 210994
+  }
+  ...
+]
+// 返回K线数据结构
+[
+  [
+    1755788400000,
+    "113231.90",
+    "113346.00",
+    "112545.40",
+    "112748.90",
+    "7958.046",
+    1755791999999,
+    "898214862.02060",
+    191458,
+    "3694.408",
+    "417022736.97130",
+    "0"
+  ]
+  ...
+]
+```
+
+数据下载的执行：
+
+```bash
+python datasource/download.py 
+```
+
+* 数据大约在65M左右
