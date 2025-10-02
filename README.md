@@ -41,7 +41,7 @@ Digital Asset Risk Analytics that based on XGBoost, 我们将开源给所有热�
 
 ## 项目进程
 
-1. 定义风险：未来6小时内下跌超过10%。
+1. 定义风险：未来6小时内下跌超过30%。
 
 2. 获取数据： 数据的下载及获取。
 

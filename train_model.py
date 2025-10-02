@@ -1,89 +1,103 @@
 import pandas as pd
 import numpy as np
 import xgboost as xgb
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 import matplotlib.pyplot as plt
+import seaborn as sns
 import warnings
 
 warnings.filterwarnings('ignore')
 
-# --- 配置 ---
-INPUT_CSV_FILE = "data/features_crypto_data.csv"
-TARGET_LOOKAHEAD_HOURS = 6  # 向前看6小时
-TARGET_DROP_PERCENT = -0.10 # 下跌超过10%
+# ==============================================================================
+# 1. 集中化配置
+# ==============================================================================
+CONFIG = {
+    "data": {
+        "input_csv_path": "data/features_crypto_data.csv",
+    },
+    "target_variable": {
+        "lookahead_hours": 1, # 向前看的小时数
+        "drop_percent": -0.10   # 定义为风险的下跌百分比 (-10%)
+    },
+    "data_split": {
+        "train_ratio": 0.7,
+        "validation_ratio": 0.15,
+        # 测试集比例将是 1 - train_ratio - validation_ratio
+    },
+    "model": {
+        "params": {
+            'objective': 'binary:logistic',
+            'eval_metric': 'logloss',
+            'use_label_encoder': False,
+            'n_estimators': 2000,
+            'learning_rate': 0.05,
+            'max_depth': 5,
+            'subsample': 0.8,
+            'colsample_bytree': 0.8,
+            'gamma': 0.1,
+            'random_state': 42
+        },
+        "early_stopping_rounds": 50,
+    },
+    "evaluation": {
+        "default_threshold": 0.5,
+        "thresholds_to_test": [0.2, 0.3, 0.4, 0.5, 0.6] # 测试不同的预测阈值
+    }
+}
 
-def create_target_variable(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    为每个数据点创建目标变量 y。
-    风险定义：未来6小时内，最低价相比当前收盤價下跌超过10%。
-    """
-    print(f"正在创建目标变量 (未来{TARGET_LOOKAHEAD_HOURS}小时内下跌超过 {-TARGET_DROP_PERCENT:.0%})...")
+
+# ==============================================================================
+# 2. 模块化函数
+# ==============================================================================
+
+def load_data(filepath: str) -> pd.DataFrame:
+    """从CSV文件加载数据并进行初步处理。"""
+    print(f"正在从 {filepath} 加载数据...")
+    try:
+        df = pd.read_csv(filepath)
+        df['open_time'] = pd.to_datetime(df['open_time'])
+        return df
+    except FileNotFoundError:
+        print(f"错误: 输入文件 '{filepath}' 未找到。请确保路径正确。")
+        return None
+
+def create_target_variable(df: pd.DataFrame, lookahead: int, drop_percent: float) -> pd.DataFrame:
+    """为数据集创建目标变量 y。"""
+    print(f"正在创建目标变量 (未来{lookahead}小时内下跌超过 {-drop_percent:.0%})...")
     
-    # 为了找到未来6小时的最低点，我们向前移动6个时间步，然后计算这个窗口内的滚动最小值
-    # shift(-TARGET_LOOKAHEAD_HOURS) 会将未来的数据向上移动
-    # rolling(...) 会在移动后的数据上计算，从而得到原始数据“未来”的滚动值
-    future_lows = df.groupby('symbol')['low'].transform(
-        lambda x: x.shift(-TARGET_LOOKAHEAD_HOURS).rolling(window=TARGET_LOOKAHEAD_HOURS, min_periods=1).min()
-    )
+    if lookahead == 1:
+        # 当只看未来1小时时，不需要滚动窗口，直接shift即可，效率更高
+        future_lows = df.groupby('symbol')['low'].shift(-1)
+    else:
+        future_lows = df.groupby('symbol')['low'].transform(
+            lambda x: x.shift(-lookahead).rolling(window=lookahead, min_periods=1).min()
+        )
     
-    # 计算未来最低价相比当前收盘价的变化率
     price_drop_ratio = (future_lows / df['close']) - 1
-    
-    # 如果变化率低于设定的阈值，则标记为1 (高风险)，否则为0
-    df['target'] = (price_drop_ratio < TARGET_DROP_PERCENT).astype(int)
-    
+    df['target'] = (price_drop_ratio < drop_percent).astype(int)
     return df
 
-def main():
-    """主函数，执行数据加载、目标变量创建、模型训练和评估。"""
-    
-    # 1. 加载特征数据
-    print(f"正在从 {INPUT_CSV_FILE} 加载数据...")
-    try:
-        df = pd.read_csv(INPUT_CSV_FILE)
-        df['open_time'] = pd.to_datetime(df['open_time'])
-    except FileNotFoundError:
-        print(f"错误: 输入文件 '{INPUT_CSV_FILE}' 未找到。请先运行 feature_engineering.py。")
-        return
-
-    # 2. 创建目标变量
-    df = create_target_variable(df)
-
-    # 3. 定义特征 (X) 和目标 (y)
-    # 移除未来信息、标识符和可能导致数据泄漏的原始价格列
+def prepare_data(df: pd.DataFrame):
+    """准备特征矩阵X和目标向量y。"""
     features_to_drop = [
         'symbol', 'open_time', 'open', 'high', 'low', 'close', 'volume', 
         'close_time', 'target'
     ]
-    X = df.drop(columns=features_to_drop)
+    X = df.drop(columns=features_to_drop, errors='ignore')
     y = df['target']
     
-    # 清理可能存在的无穷大值
     X.replace([np.inf, -np.inf], np.nan, inplace=True)
-    X.fillna(0, inplace=True) # 使用0填充NaN，也可以选择其他策略
-
+    X.fillna(0, inplace=True)
+    
     print("特征 (X) 和目标 (y) 已准备就绪。")
-    print("特征数量:", len(X.columns))
+    print(f"特征数量: {len(X.columns)}")
+    return X, y
 
-    # 4. 类别平衡检查
-    target_counts = y.value_counts()
-    print("\n目标变量分布:")
-    print(target_counts)
-    if 1 not in target_counts or target_counts[1] == 0:
-        print("警告: 数据中没有高风险样本，无法训练模型。请调整风险定义或使用更长的数据周期。")
-        return
-        
-    # 计算类别权重，用于处理不平衡数据
-    scale_pos_weight = target_counts[0] / target_counts[1]
-    print(f"计算得到的 scale_pos_weight: {scale_pos_weight:.2f}")
-
-    # 5. 时间序列数据划分
-    # 绝不使用随机划分！必须按时间顺序。
+def split_data_temporal(X, y, train_ratio, val_ratio):
+    """按时间顺序划分数据集。"""
     print("\n正在按时间顺序划分数据集...")
-    # 使用总数据的70%作为训练集，15%作为验证集，15%作为测试集
-    train_size = int(len(df) * 0.7)
-    val_size = int(len(df) * 0.15)
+    train_size = int(len(X) * train_ratio)
+    val_size = int(len(X) * val_ratio)
     
     X_train, y_train = X.iloc[:train_size], y.iloc[:train_size]
     X_val, y_val = X.iloc[train_size:train_size + val_size], y.iloc[train_size:train_size + val_size]
@@ -92,57 +106,100 @@ def main():
     print(f"训练集大小: {len(X_train)}")
     print(f"验证集大小: {len(X_val)}")
     print(f"测试集大小: {len(X_test)}")
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
-    # 6. 训练 XGBoost 模型
+def train_xgboost_model(X_train, y_train, X_val, y_val, model_params):
+    """训练XGBoost模型（为兼容旧版本XGBoost，关闭提前停止）。"""
     print("\n正在训练 XGBoost 模型...")
-    model = xgb.XGBClassifier(
-        objective='binary:logistic',
-        eval_metric='logloss',
-        use_label_encoder=False,
-        n_estimators=1000,          # 初始设置较大的树数量
-        learning_rate=0.05,
-        max_depth=5,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        gamma=0.1,
-        scale_pos_weight=scale_pos_weight, # 关键参数：处理类别不平衡
-        random_state=42
-    )
+    target_counts = y_train.value_counts()
+    if 1 not in target_counts or target_counts[1] == 0:
+        print("警告: 训练集中没有高风险样本，无法计算权重。")
+        scale_pos_weight = 1
+    else:
+        scale_pos_weight = target_counts[0] / target_counts[1]
+        print(f"计算得到的 scale_pos_weight: {scale_pos_weight:.2f}")
 
-    # 使用验证集进行提前停止，防止过拟合
+    model = xgb.XGBClassifier(**model_params, scale_pos_weight=scale_pos_weight)
+    
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
         verbose=False
     )
     print("模型训练完成。")
+    return model
 
-    # 7. 在测试集上评估模型
-    print("\n--- 模型性能评估 (测试集) ---")
-    y_pred = model.predict(X_test)
+def evaluate_model(model, X_test, y_test, threshold=0.5):
+    """在测试集上以指定阈值评估模型性能。"""
     y_pred_proba = model.predict_proba(X_test)[:, 1]
-
+    y_pred = (y_pred_proba >= threshold).astype(int)
+    
+    print(f"\n--- 模型性能评估 (测试集, 预测阈值 = {threshold}) ---")
     print("\n混淆矩阵:")
-    # [[TN, FP],
-    #  [FN, TP]]
     print(confusion_matrix(y_test, y_pred))
     
     print("\n分类报告:")
-    print(classification_report(y_test, y_pred, target_names=['低风险 (0)', '高风险 (1)']))
+    print(classification_report(y_test, y_pred, target_names=['低风险 (0)', '高风险 (1)'], digits=4))
     
     print(f"AUC-ROC 分数: {roc_auc_score(y_test, y_pred_proba):.4f}")
+
+def plot_feature_importance(model, features):
+    """绘制特征重要性图表。"""
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax = plt.subplots(figsize=(12, 8))
     
-    print("\n**评估解读:**")
-    print("关注 '高风险 (1)' 类别的 [Recall] (召回率) 指标。")
-    print("它表示在所有真实发生的高风险事件中，我们的模型成功预测出了多少比例。对于风控系统，这个指标越高越好。")
-    
-    # 8. 显示特征重要性
-    print("\n--- Top 20 特征重要性 ---")
     feature_importance = pd.DataFrame({
-        'feature': X.columns,
+        'feature': features.columns,
         'importance': model.feature_importances_
     }).sort_values('importance', ascending=False).head(20)
-    print(feature_importance)
+    
+    sns.barplot(x='importance', y='feature', data=feature_importance, palette='viridis', ax=ax)
+    ax.set_title('Top 20 特征重要性', fontsize=16)
+    ax.set_xlabel('重要性', fontsize=12)
+    ax.set_ylabel('特征', fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
+# ==============================================================================
+# 3. 主执行流程
+# ==============================================================================
+
+def main():
+    """主函数，执行整个流程。"""
+    df = load_data(CONFIG["data"]["input_csv_path"])
+    if df is None:
+        return
+        
+    df = create_target_variable(
+        df, 
+        CONFIG["target_variable"]["lookahead_hours"], 
+        CONFIG["target_variable"]["drop_percent"]
+    )
+    
+    X, y = prepare_data(df)
+    
+    X_train, y_train, X_val, y_val, X_test, y_test = split_data_temporal(
+        X, y, 
+        CONFIG["data_split"]["train_ratio"],
+        CONFIG["data_split"]["validation_ratio"]
+    )
+    
+    model = train_xgboost_model(
+        X_train, y_train, X_val, y_val,
+        CONFIG["model"]["params"]
+    )
+    
+    # 使用多个不同阈值评估模型
+    for threshold in CONFIG["evaluation"]["thresholds_to_test"]:
+        evaluate_model(model, X_test, y_test, threshold=threshold)
+        
+    print("\n**评估解读:**")
+    print("关注 '高风险 (1)' 类别的 [Recall] (召回率) 和 [Precision] (精确率)。")
+    print("降低阈值通常会提高召回率（抓住更多风险）但降低精确率（更多虚假警报），反之亦然。")
+    print("请根据您的风险偏好，选择最佳的阈值平衡点。")
+    
+    plot_feature_importance(model, X)
 
 
 if __name__ == "__main__":

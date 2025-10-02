@@ -6,6 +6,8 @@ from tqdm import tqdm
 # --- 配置 ---
 TICKER_API_URL = "https://api.lewiszhang.top/ticker/24hr"
 KLINES_API_URL = "https://api.lewiszhang.top/klines"
+RATIO_API_URL = "https://api.lewiszhang.top/topLongShortAccountRatio"
+POSITION_RATIO_API_URL = "https://api.lewiszhang.top/topLongShortPositionRatio"
 OUTPUT_CSV_FILE = "data/crypto_klines_data.csv"
 REQUEST_DELAY_SECONDS = 0.1 # 每次API请求之间的延迟，防止请求过于频繁
 
@@ -58,6 +60,38 @@ def fetch_klines_for_symbol(symbol: str, interval: str = '1h', limit: int = 1000
         print(f"  - 警告: 获取 {symbol} 的K线数据失败: {e}")
         return None
 
+def fetch_account_ratio_for_symbol(symbol: str, period: str = '1h', limit: int = 1000):
+    """为单个交易对获取账户多空比时间序列。"""
+    params = {
+        'symbol': symbol,
+        'period': period,
+        'limit': limit
+    }
+    try:
+        response = requests.get(RATIO_API_URL, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        # 打印错误信息但程序不中断
+        print(f"  - 警告: 获取 {symbol} 的账户多空比失败: {e}")
+        return None
+
+def fetch_position_ratio_for_symbol(symbol: str, period: str = '1h', limit: int = 1000):
+    """为单个交易对获取持仓多空比时间序列。"""
+    params = {
+        'symbol': symbol,
+        'period': period,
+        'limit': limit
+    }
+    try:
+        response = requests.get(POSITION_RATIO_API_URL, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        # 打印错误信息但程序不中断
+        print(f"  - 警告: 获取 {symbol} 的持仓多空比失败: {e}")
+        return None
+
 def main():
     """主函数，执行整个数据获取和存储流程。"""
     # 1. 获取所有交易对
@@ -102,6 +136,68 @@ def main():
     
     # 忽略最后一个字段 'ignore'
     df = df.drop(columns=['ignore'])
+
+    # 4. 获取并合并账户多空比(按 symbol + open_time 对齐)
+    print("\n正在获取账户多空比数据并进行合并...")
+    ratio_records = []
+    unique_symbols = df['symbol'].unique().tolist()
+    for symbol in tqdm(unique_symbols, desc="正在获取多空比"):
+        ratios = fetch_account_ratio_for_symbol(symbol, period='1h', limit=1000)
+        if ratios:
+            for r in ratios:
+                ratio_records.append({
+                    'symbol': r.get('symbol', symbol),
+                    'timestamp': r.get('timestamp'),
+                    'longShortRatio': r.get('longShortRatio')
+                })
+        time.sleep(REQUEST_DELAY_SECONDS)
+
+    if ratio_records:
+        ratio_df = pd.DataFrame(ratio_records)
+        ratio_df['timestamp'] = pd.to_numeric(ratio_df['timestamp'], errors='coerce')
+        ratio_df['longShortRatio'] = pd.to_numeric(ratio_df['longShortRatio'], errors='coerce')
+
+        df = df.merge(
+            ratio_df[['symbol', 'timestamp', 'longShortRatio']],
+            left_on=['symbol', 'open_time'],
+            right_on=['symbol', 'timestamp'],
+            how='left'
+        )
+        df = df.drop(columns=['timestamp'])
+        df = df.rename(columns={'longShortRatio': 'long_short_ratio'})
+    else:
+        df['long_short_ratio'] = float('nan')
+
+    # 5. 获取并合并持仓多空比(按 symbol + open_time 对齐)
+    print("\n正在获取持仓多空比数据并进行合并...")
+    pos_ratio_records = []
+    for symbol in tqdm(unique_symbols, desc="正在获取持仓多空比"):
+        pos_ratios = fetch_position_ratio_for_symbol(symbol, period='1h', limit=1000)
+        if pos_ratios:
+            for r in pos_ratios:
+                pos_ratio_records.append({
+                    'symbol': r.get('symbol', symbol),
+                    'timestamp': r.get('timestamp'),
+                    'longShortRatio': r.get('longShortRatio')
+                })
+        time.sleep(REQUEST_DELAY_SECONDS)
+
+    if pos_ratio_records:
+        pos_ratio_df = pd.DataFrame(pos_ratio_records)
+        pos_ratio_df['timestamp'] = pd.to_numeric(pos_ratio_df['timestamp'], errors='coerce')
+        pos_ratio_df['longShortRatio'] = pd.to_numeric(pos_ratio_df['longShortRatio'], errors='coerce')
+
+        df = df.merge(
+            pos_ratio_df[['symbol', 'timestamp', 'longShortRatio']],
+            left_on=['symbol', 'open_time'],
+            right_on=['symbol', 'timestamp'],
+            how='left',
+            suffixes=(None, '_pos')
+        )
+        df = df.drop(columns=['timestamp'])
+        df = df.rename(columns={'longShortRatio': 'long_short_position_ratio'})
+    else:
+        df['long_short_position_ratio'] = float('nan')
 
     df.to_csv(OUTPUT_CSV_FILE, index=False)
     print(f"✅ 数据成功保存到文件: {OUTPUT_CSV_FILE}")
