@@ -63,6 +63,18 @@ You can trade off speed, cost, and accuracy via these knobs:
 
 For quick iterations, start with a small `max_combinations` (e.g., 10–20) and moderate `n_estimators` (e.g., 800), then scale up.
 
+## Entry Conditions (optional, for signal deployment)
+
+If you use CoinGuard to drive trading signals, you may enforce additional entry filters:
+
+- Fee rate must be less than or equal to +0.0100% (non-positive to +0.0100%)
+- Current day gain must be greater than the rolling 24h gain
+
+Notes
+
+- Define consistent units for fee rate (e.g., percent vs fraction) and returns.
+- Ensure the necessary inputs are available in your data feed before enforcing filters.
+
 ## Data Sources
 
 - Tickers: `https://api.lewiszhang.top/ticker/24hr`
