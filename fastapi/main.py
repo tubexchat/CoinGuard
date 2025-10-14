@@ -16,12 +16,22 @@ import sys
 from datetime import datetime
 import logging
 
-# 添加项目根目录到路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# 添加项目根目录到路径，优先本地模块
+current_dir = os.path.dirname(__file__)
+project_root = os.path.abspath(os.path.join(current_dir, '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from fastapi.models.model_manager import ModelManager
-from fastapi.utils.data_validator import DataValidator
-from fastapi.utils.response_formatter import ResponseFormatter
+# 使用相对/本地导入，避免与第三方 fastapi 包冲突
+from models.model_manager import ModelManager
+from utils.data_validator import DataValidator
+from utils.response_formatter import ResponseFormatter
+from data.raw.download import (
+    KLINE_COLUMNS,
+    fetch_klines_for_symbol,
+    fetch_account_ratio_for_symbol,
+    fetch_position_ratio_for_symbol,
+)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -92,6 +102,26 @@ class HealthResponse(BaseModel):
     timestamp: str = Field(..., description="时间戳")
     model_loaded: bool = Field(..., description="模型是否已加载")
     model_info: Optional[Dict[str, Any]] = Field(None, description="模型信息")
+
+
+class SymbolPredictRequest(BaseModel):
+    """按交易对拉取数据并预测的请求模型"""
+    symbol: str = Field(..., description="交易对符号，如BTCUSDT")
+    interval: Optional[str] = Field("1h", description="K线周期，如1h")
+    limit: Optional[int] = Field(200, ge=10, le=1000, description="拉取数据条数")
+    threshold: Optional[float] = Field(0.6, ge=0, le=1, description="预测阈值")
+
+
+class SymbolPredictionResponse(BaseModel):
+    """按交易对预测的精简响应（仅返回最新一条的方向判断）"""
+    symbol: str = Field(..., description="交易对")
+    interval: str = Field(..., description="K线周期")
+    next_hour: str = Field(..., description="方向：up 或 down")
+    probability: float = Field(..., ge=0, le=1, description="预测为上涨的概率")
+    confidence: float = Field(..., ge=0, le=1, description="置信度")
+    threshold: float = Field(..., ge=0, le=1, description="使用的阈值")
+    latest_open_time: Optional[str] = Field(None, description="最新K线开盘时间（ISO）")
+    model_name: Optional[str] = Field(None, description="模型名称")
 
 
 # 依赖注入
@@ -269,6 +299,137 @@ async def get_feature_list(model_manager: ModelManager = Depends(get_model_manag
         "features": model_manager.get_feature_names(),
         "feature_count": len(model_manager.get_feature_names())
     }
+
+
+@app.post("/predict/symbol", response_model=SymbolPredictionResponse)
+async def predict_by_symbol(
+    request: SymbolPredictRequest,
+    model_manager: ModelManager = Depends(get_model_manager),
+    response_formatter: ResponseFormatter = Depends(get_response_formatter)
+):
+    """按交易对自动获取数据并进行预测"""
+    try:
+        # 检查模型是否已加载
+        if not model_manager.is_model_loaded():
+            raise HTTPException(status_code=503, detail="模型未加载，请稍后重试或联系管理员")
+
+        symbol = request.symbol.upper().strip()
+        interval = request.interval
+        limit = request.limit
+
+        # 1) 拉取K线数据
+        klines = fetch_klines_for_symbol(symbol=symbol, interval=interval, limit=limit)
+        if not klines:
+            raise HTTPException(status_code=502, detail=f"获取 {symbol} K线数据失败")
+
+        # 转为DataFrame并清洗
+        records = [[symbol] + k for k in klines]
+        df = pd.DataFrame(records, columns=KLINE_COLUMNS)
+        if 'ignore' in df.columns:
+            df = df.drop(columns=['ignore'])
+
+        # 数值列转型
+        numeric_cols = [
+            'open', 'high', 'low', 'close', 'volume', 'quote_asset_volume',
+            'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume'
+        ]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # 2) 合并多空比
+        ratios = fetch_account_ratio_for_symbol(symbol=symbol, period='1h', limit=limit)
+        if ratios:
+            ratio_df = pd.DataFrame([
+                {
+                    'symbol': r.get('symbol', symbol),
+                    'timestamp': pd.to_numeric(r.get('timestamp'), errors='coerce'),
+                    'longShortRatio': pd.to_numeric(r.get('longShortRatio'), errors='coerce'),
+                }
+                for r in ratios
+            ])
+            if not ratio_df.empty:
+                df = df.merge(
+                    ratio_df[['symbol', 'timestamp', 'longShortRatio']],
+                    left_on=['symbol', 'open_time'],
+                    right_on=['symbol', 'timestamp'],
+                    how='left'
+                ).drop(columns=['timestamp'])
+                df = df.rename(columns={'longShortRatio': 'long_short_ratio'})
+        else:
+            df['long_short_ratio'] = np.nan
+
+        # 3) 合并持仓多空比
+        pos_ratios = fetch_position_ratio_for_symbol(symbol=symbol, period='1h', limit=limit)
+        if pos_ratios:
+            pos_ratio_df = pd.DataFrame([
+                {
+                    'symbol': r.get('symbol', symbol),
+                    'timestamp': pd.to_numeric(r.get('timestamp'), errors='coerce'),
+                    'longShortRatio': pd.to_numeric(r.get('longShortRatio'), errors='coerce'),
+                }
+                for r in pos_ratios
+            ])
+            if not pos_ratio_df.empty:
+                df = df.merge(
+                    pos_ratio_df[['symbol', 'timestamp', 'longShortRatio']],
+                    left_on=['symbol', 'open_time'],
+                    right_on=['symbol', 'timestamp'],
+                    how='left'
+                ).drop(columns=['timestamp'])
+                df = df.rename(columns={'longShortRatio': 'long_short_position_ratio'})
+        else:
+            df['long_short_position_ratio'] = np.nan
+
+        # 确保时间排序，取最新一条
+        try:
+            df_sorted = df.copy()
+            # open_time 可能是毫秒整型，转换为datetime仅用于响应展示
+            latest_open_time_iso = None
+            if 'open_time' in df_sorted.columns:
+                # 保存最新一条的时间戳（毫秒或秒）
+                latest_row = df_sorted.sort_values('open_time').iloc[-1]
+                try:
+                    ts = pd.to_numeric(latest_row['open_time'], errors='coerce')
+                    # 兼容毫秒/秒级时间戳
+                    if not np.isnan(ts):
+                        if ts > 10_000_000_000:  # 毫秒
+                            latest_open_time_iso = pd.to_datetime(ts, unit='ms').isoformat()
+                        else:  # 秒
+                            latest_open_time_iso = pd.to_datetime(ts, unit='s').isoformat()
+                except Exception:
+                    latest_open_time_iso = None
+                df_sorted = df_sorted.sort_values('open_time')
+            else:
+                df_sorted = df_sorted.reset_index(drop=True)
+        except Exception:
+            df_sorted = df
+            latest_open_time_iso = None
+
+        # 4) 进行预测（对排序后的数据）
+        predictions = model_manager.predict(df_sorted, threshold=request.threshold)
+        if not predictions:
+            raise HTTPException(status_code=500, detail="预测结果为空")
+
+        last_pred = predictions[-1]
+        direction = 'up' if int(last_pred.get('prediction', 0)) == 1 else 'down'
+
+        return SymbolPredictionResponse(
+            symbol=symbol,
+            interval=interval,
+            next_hour=direction,
+            probability=float(last_pred.get('probability', 0.0)),
+            confidence=float(last_pred.get('confidence', 0.0)),
+            threshold=float(request.threshold or 0.6),
+            latest_open_time=latest_open_time_iso,
+            model_name=(model_manager.get_model_info() or {}).get('model_name')
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"按symbol预测过程中发生错误: {e}")
+        raise HTTPException(status_code=500, detail=f"按symbol预测失败: {str(e)}")
 
 
 if __name__ == "__main__":

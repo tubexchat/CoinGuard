@@ -1,9 +1,8 @@
 # CoinGuard: 基于机器学习的加密货币风险预测系统
 
+<img src="static/images/logo_bar.png"/>
 
 CoinGuard 是一个基于机器学习的开源加密货币风险预测系统。它使用工程化的市场微观结构和技术指标，通过XGBoost在时间分割数据上进行训练，来检测加密货币市场的高风险场景。项目采用模块化架构设计，分为训练区域、测试区域、FastAPI区域、数据存储区域和文档区域。
-
-<img src="static/images/logo_bar.png"/>
 
 ## 🚀 主要特性
 
@@ -61,14 +60,16 @@ pip install -r requirements.txt
 # 初始化环境
 python run.py setup
 
-# 下载数据
+# 下载数据(大约在3个半小时)
 python run.py download
 
 # 生成特征
 python run.py features
 
-# 训练模型
-python run.py train
+# 训练模型（data/models/ 目录下生成相应的PKL文件）
+python training/train_model.py
+# or
+python run.py train 
 
 # 启动API服务
 python run.py api
@@ -79,3 +80,12 @@ python run.py test
 # 查看状态
 python run.py status
 ```
+
+## 持久化模型的分类
+
+1. **{model_name}.pkl**: 训练好的 XGBoost 模型对象，用于预测（predict_proba/predict）。
+2. **{model_name}features.pkl**: 训练时使用的特征列名列表（含顺序）。在线推理时按此顺序对齐特征，避免列错位。
+3. **{model_name}config.pkl**: 训练配置字典，包含数据路径、模型参数、数据集划分比例、评估阈值等，便于复现实验与审计。
+4. **{model_name}stats.pkl**: 训练统计信息，例如样本量、特征数、目标分布、模型类型、训练时间等，用于监控与记录。
+
+FastAPI 服务通过 fastapi/models/model_manager.py 的 load_latest_model() 同时加载这四个文件：模型用于预测；features 保证输入列顺序；config 和 stats 提供元数据与可观测性。

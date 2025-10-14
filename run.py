@@ -52,7 +52,7 @@ def download_data():
     print("正在下载原始数据...")
     try:
         # 直接运行下载脚本，不捕获输出以显示进度条
-        result = subprocess.run("python download.py", shell=True, cwd="data/raw", check=True)
+        result = subprocess.run(f"{sys.executable} download.py", shell=True, cwd="data/raw", check=True)
         print("数据下载完成!")
         return True
     except subprocess.CalledProcessError as e:
@@ -63,7 +63,7 @@ def download_data():
 def generate_features():
     """生成特征数据"""
     print("正在生成特征数据...")
-    success = run_command("python feature_engineering.py", cwd="data/processed")
+    success = run_command(f"{sys.executable} feature_engineering.py", cwd="data/processed")
     if success:
         print("特征生成完成!")
     else:
@@ -74,7 +74,7 @@ def generate_features():
 def train_model():
     """训练模型"""
     print("正在训练模型...")
-    success = run_command("python train_model.py", cwd="training")
+    success = run_command(f"{sys.executable} train_model.py", cwd="training")
     if success:
         print("模型训练完成!")
     else:
@@ -90,7 +90,7 @@ def start_api():
     print("按 Ctrl+C 停止服务")
     
     try:
-        run_command("python main.py", cwd="fastapi")
+        run_command(f"{sys.executable} main.py", cwd="fastapi")
     except KeyboardInterrupt:
         print("\nAPI服务已停止")
 
@@ -98,7 +98,7 @@ def start_api():
 def run_tests():
     """运行测试"""
     print("正在运行测试...")
-    success = run_command("python -m pytest testing/ -v", cwd=".")
+    success = run_command(f"{sys.executable} -m pytest testing/ -v", cwd=".")
     if success:
         print("所有测试通过!")
     else:

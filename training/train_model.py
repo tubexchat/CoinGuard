@@ -17,7 +17,7 @@ warnings.filterwarnings('ignore')
 # ==============================================================================
 CONFIG = {
     "data": {
-        "input_csv_path": "../data/processed/features_crypto_data.csv",
+        "input_csv_path": "../data/features_crypto_data.csv",
         "model_output_path": "../data/models/",
     },
     "target_variable": {
