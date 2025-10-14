@@ -203,57 +203,7 @@ async def health_check():
     )
 
 
-@app.post("/predict", response_model=PredictionResponse)
-async def predict_risk(
-    request: PredictionRequest,
-    model_manager: ModelManager = Depends(get_model_manager),
-    data_validator: DataValidator = Depends(get_data_validator),
-    response_formatter: ResponseFormatter = Depends(get_response_formatter)
-):
-    """风险预测API"""
-    try:
-        # 检查模型是否已加载
-        if not model_manager.is_model_loaded():
-            raise HTTPException(
-                status_code=503,
-                detail="模型未加载，请稍后重试或联系管理员"
-            )
-        
-        # 验证输入数据
-        validation_result = data_validator.validate_market_data(request.data)
-        if not validation_result["valid"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"数据验证失败: {validation_result['errors']}"
-            )
-        
-        # 转换数据格式
-        df = pd.DataFrame([item.dict() for item in request.data])
-        
-        # 进行预测
-        predictions = model_manager.predict(df, threshold=request.threshold)
-        
-        # 格式化响应
-        response = response_formatter.format_prediction_response(
-            predictions=predictions,
-            model_info=model_manager.get_model_info(),
-            request_info={
-                "data_count": len(request.data),
-                "threshold": request.threshold,
-                "timestamp": datetime.now().isoformat()
-            }
-        )
-        
-        return response
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"预测过程中发生错误: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"预测过程中发生内部错误: {str(e)}"
-        )
+ 
 
 
 @app.get("/model/info")
