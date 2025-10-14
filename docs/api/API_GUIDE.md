@@ -10,6 +10,7 @@ CoinGuard API 提供基于机器学习的加密货币风险预测服务。API �
 - **API 版本**: v1.0.0
 - **数据格式**: JSON
 - **认证**: 无需认证（开发版本）
+- **Logo**: `/static/images/logo_bar.png` 或 `/logo`
 
 ## 快速开始
 
@@ -174,7 +175,15 @@ curl http://localhost:8000/health
 }
 ```
 
-### 4. 特征列表
+### 4. 获取Logo
+
+**端点**: `GET /logo`
+
+**描述**: 获取CoinGuard项目的logo图片
+
+**响应**: 返回PNG格式的logo图片文件
+
+### 5. 特征列表
 
 **端点**: `GET /features`
 

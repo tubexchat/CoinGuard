@@ -50,12 +50,14 @@ def setup_environment():
 def download_data():
     """下载原始数据"""
     print("正在下载原始数据...")
-    success = run_command("python download.py", cwd="data/raw")
-    if success:
+    try:
+        # 直接运行下载脚本，不捕获输出以显示进度条
+        result = subprocess.run("python download.py", shell=True, cwd="data/raw", check=True)
         print("数据下载完成!")
-    else:
-        print("数据下载失败!")
-    return success
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"数据下载失败: {e}")
+        return False
 
 
 def generate_features():

@@ -1,8 +1,9 @@
 # CoinGuard: 基于机器学习的加密货币风险预测系统
 
-English | [简体中文](README.zh-CN.md)
 
 CoinGuard 是一个基于机器学习的开源加密货币风险预测系统。它使用工程化的市场微观结构和技术指标，通过XGBoost在时间分割数据上进行训练，来检测加密货币市场的高风险场景。项目采用模块化架构设计，分为训练区域、测试区域、FastAPI区域、数据存储区域和文档区域。
+
+<img src="static/images/logo_bar.png"/>
 
 ## 🚀 主要特性
 
@@ -37,6 +38,9 @@ CoinGuard/
 │   ├── processed/           # 处理后数据
 │   ├── models/              # 模型文件
 │   └── data_manager.py      # 数据管理器
+├── static/                  # 静态资源区域
+│   └── images/              # 图片资源
+│       └── logo_bar.png     # CoinGuard logo
 ├── docs/                    # 文档区域
 │   ├── README.md            # 架构文档
 │   ├── api/                 # API文档

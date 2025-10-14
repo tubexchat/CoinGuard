@@ -5,6 +5,8 @@ FastAPI主应用
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import pandas as pd
@@ -42,6 +44,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="../static"), name="static")
 
 # 全局变量
 model_manager = None
@@ -140,8 +145,19 @@ async def root():
     return {
         "message": "CoinGuard Risk Prediction API",
         "version": "1.0.0",
-        "docs": "/docs"
+        "docs": "/docs",
+        "logo": "/static/images/logo_bar.png"
     }
+
+
+@app.get("/logo")
+async def get_logo():
+    """获取CoinGuard logo"""
+    logo_path = os.path.join(os.path.dirname(__file__), "..", "static", "images", "logo_bar.png")
+    if os.path.exists(logo_path):
+        return FileResponse(logo_path, media_type="image/png")
+    else:
+        raise HTTPException(status_code=404, detail="Logo not found")
 
 
 @app.get("/health", response_model=HealthResponse)
