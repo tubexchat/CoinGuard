@@ -32,6 +32,7 @@ from data.raw.download import (
     fetch_account_ratio_for_symbol,
     fetch_position_ratio_for_symbol,
 )
+from training.train_model import main as train_main
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -116,7 +117,7 @@ class SymbolPredictionResponse(BaseModel):
     """按交易对预测的精简响应（仅返回最新一条的方向判断）"""
     symbol: str = Field(..., description="交易对")
     interval: str = Field(..., description="K线周期")
-    next_hour: str = Field(..., description="方向：up 或 down")
+    next_6h: str = Field(..., description="未来6小时方向：up 或 down")
     probability: float = Field(..., ge=0, le=1, description="预测为上涨的概率")
     confidence: float = Field(..., ge=0, le=1, description="置信度")
     threshold: float = Field(..., ge=0, le=1, description="使用的阈值")
@@ -235,6 +236,25 @@ async def reload_model(model_manager: ModelManager = Depends(get_model_manager))
             detail=f"模型重新加载失败: {str(e)}"
         )
 
+
+@app.post("/model/train")
+async def train_and_reload(model_manager: ModelManager = Depends(get_model_manager)):
+    """触发重新训练模型并重新加载最新模型。"""
+    try:
+        logger.info("开始训练模型（目标：未来6小时 up/down）...")
+        # 运行训练流程
+        train_main()
+        logger.info("训练完成，开始重新加载最新模型...")
+        # 训练完成后重新加载
+        model_manager.load_latest_model()
+        return {
+            "message": "训练完成并已重新加载最新模型",
+            "timestamp": datetime.now().isoformat(),
+            "model_info": model_manager.get_model_info()
+        }
+    except Exception as e:
+        logger.error(f"训练或重载失败: {e}")
+        raise HTTPException(status_code=500, detail=f"训练或重载失败: {str(e)}")
 
 @app.get("/features")
 async def get_feature_list(model_manager: ModelManager = Depends(get_model_manager)):
@@ -356,7 +376,7 @@ async def predict_by_symbol(
             df_sorted = df
             latest_open_time_iso = None
 
-        # 4) 进行预测（对排序后的数据）
+        # 4) 进行预测（对排序后的数据，预测未来6小时方向）
         predictions = model_manager.predict(df_sorted, threshold=request.threshold)
         if not predictions:
             raise HTTPException(status_code=500, detail="预测结果为空")
@@ -367,7 +387,7 @@ async def predict_by_symbol(
         return SymbolPredictionResponse(
             symbol=symbol,
             interval=interval,
-            next_hour=direction,
+            next_6h=direction,
             probability=float(last_pred.get('probability', 0.0)),
             confidence=float(last_pred.get('confidence', 0.0)),
             threshold=float(request.threshold or 0.6),

@@ -21,8 +21,9 @@ CONFIG = {
         "model_output_path": "../data/models/",
     },
     "target_variable": {
-        "lookahead_hours": 1, # 向前看的小时数
-        "drop_percent": -0.10   # 定义为风险的下跌百分比 (-10%)
+        "lookahead_hours": 6, # 向前看的小时数（预测未来6小时）
+        # 上下行预测任务不再使用跌幅阈值
+        "drop_percent": None
     },
     "data_split": {
         "train_ratio": 0.7,
@@ -81,20 +82,13 @@ def load_data(filepath: str) -> pd.DataFrame:
         print(f"错误: 输入文件 '{filepath}' 未找到。请确保路径正确。")
         return None
 
-def create_target_variable(df: pd.DataFrame, lookahead: int, drop_percent: float) -> pd.DataFrame:
-    """为数据集创建目标变量 y。"""
-    print(f"正在创建目标变量 (未来{lookahead}小时内下跌超过 {-drop_percent:.0%})...")
-    
-    if lookahead == 1:
-        # 当只看未来1小时时，不需要滚动窗口，直接shift即可，效率更高
-        future_lows = df.groupby('symbol')['low'].shift(-1)
-    else:
-        future_lows = df.groupby('symbol')['low'].transform(
-            lambda x: x.shift(-lookahead).rolling(window=lookahead, min_periods=1).min()
-        )
-    
-    price_drop_ratio = (future_lows / df['close']) - 1
-    df['target'] = (price_drop_ratio < drop_percent).astype(int)
+def create_target_variable(df: pd.DataFrame, lookahead: int, drop_percent: float | None) -> pd.DataFrame:
+    """为数据集创建目标变量 y（未来N小时上涨为1，否则为0）。"""
+    print(f"正在创建目标变量: 未来{lookahead}小时方向 (up=1 / down=0)...")
+
+    # 使用未来lookahead小时后的收盘价与当前收盘价比较
+    future_close = df.groupby('symbol')['close'].shift(-lookahead)
+    df['target'] = (future_close > df['close']).astype(int)
     return df
 
 def prepare_data(df: pd.DataFrame):
