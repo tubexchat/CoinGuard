@@ -441,7 +441,6 @@ class AdvancedXGBoostModel:
             model.fit(
                 X_train_fold, y_train_fold,
                 eval_set=[(X_train_fold, y_train_fold), (X_val_fold, y_val_fold)],
-                eval_metric=['logloss', 'auc'],
                 verbose=False
             )
             
@@ -511,7 +510,6 @@ class AdvancedXGBoostModel:
         self.model.fit(
             X_train, y_train,
             eval_set=[(X_train, y_train), (X_val, y_val)],
-            eval_metric=['logloss', 'auc'],
             verbose=False
         )
         
