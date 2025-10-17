@@ -49,7 +49,7 @@ cd data/processed
 python feature_engineering.py
 ```
 
-这将生成包含所有特征的 `features_crypto_data.csv` 文件。
+这将生成包含所有特征的 `enhanced_features_crypto_data.csv` 文件。
 
 ## 配置说明
 
@@ -58,7 +58,7 @@ python feature_engineering.py
 ```python
 # 数据配置
 DATA_CONFIG = {
-    "input_csv_path": "../data/processed/features_crypto_data.csv",
+    "input_csv_path": "../data/processed/enhanced_features_crypto_data.csv",
     "model_output_path": "../data/models/",
 }
 

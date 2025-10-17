@@ -111,10 +111,6 @@ python data/processed/enhanced_feature_engineering.py
 ```bash
 # Train advanced XGBoost model with optimization
 python training/models/advanced_xgboost_model.py
-
-# Or use the comprehensive training pipeline
-python run.py train
-
 # Generate evaluation reports
 python training/utils/advanced_evaluation.py
 ```

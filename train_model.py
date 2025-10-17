@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore')
 # ==============================================================================
 CONFIG = {
     "data": {
-        "input_csv_path": "data/features_crypto_data.csv",
+        "input_csv_path": "data/enhanced_features_crypto_data.csv",
     },
     "target_variable": {
         "lookahead_hours": 1, # 向前看的小时数

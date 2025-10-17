@@ -104,6 +104,8 @@ python run.py download
 
 # 生成增强特征（200+指标）
 python data/processed/enhanced_feature_engineering.py
+
+# source ../../venv/bin/activate && python enhanced_feature_engineering.py
 ```
 
 ### 模型训练

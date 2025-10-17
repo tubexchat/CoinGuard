@@ -3,7 +3,7 @@ import numpy as np
 
 # --- 配置 ---
 INPUT_CSV_FILE = "data/raw/data/crypto_klines_data.csv"
-OUTPUT_CSV_FILE = "data/features_crypto_data.csv"
+OUTPUT_CSV_FILE = "data/enhanced_features_crypto_data.csv"
 
 
 def calculate_rsi(prices, period=14):

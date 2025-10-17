@@ -5,7 +5,7 @@
 
 # 数据配置
 DATA_CONFIG = {
-    "input_csv_path": "../data/processed/features_crypto_data.csv",
+    "input_csv_path": "../data/enhanced_features_crypto_data.csv",
     "model_output_path": "../data/models/",
     "feature_importance_plot_path": "../data/models/feature_importance.png"
 }

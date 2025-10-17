@@ -39,8 +39,8 @@ class ModelConfig:
     """Configuration class for model parameters and training settings."""
     
     # Data configuration
-    input_csv_path: str = "../data/features_crypto_data.csv"
-    model_output_path: str = "../data/models/"
+    input_csv_path: str = "data/enhanced_features_crypto_data.csv"
+    model_output_path: str = "data/models/"
     
     # Target variable configuration
     lookahead_hours: int = 6
@@ -161,7 +161,17 @@ class AdvancedFeatureEngineering:
         print("Creating regime features...")
         
         # Volatility regimes
-        df['vol_regime'] = pd.qcut(df['realized_vol_24h'], q=3, labels=[0, 1, 2])
+        vol_series = df['realized_vol_24h']
+        # Handle constant/insufficient unique values safely
+        if vol_series.nunique(dropna=True) < 3:
+            # Fallback: single mid regime
+            df['vol_regime'] = 1
+        else:
+            try:
+                df['vol_regime'] = pd.qcut(vol_series, q=3, labels=[0, 1, 2], duplicates='drop')
+            except ValueError:
+                # If bin edges are still not unique after duplicates drop, fallback to cut
+                df['vol_regime'] = pd.cut(vol_series, bins=3, labels=[0, 1, 2], include_lowest=True)
         
         # Trend regimes based on multiple moving averages
         df['sma_12'] = df['close'].rolling(12).mean()
@@ -372,7 +382,10 @@ class AdvancedXGBoostModel:
         
         # Handle infinite values and missing data
         X = X.replace([np.inf, -np.inf], np.nan)
-        X = X.fillna(X.median())
+        numeric_columns = X.select_dtypes(include=[np.number]).columns
+        X[numeric_columns] = X[numeric_columns].fillna(X[numeric_columns].median())
+        # Final safeguard for any remaining NaNs in non-numeric columns if any
+        X = X.fillna(0)
         
         print(f"Feature matrix shape: {X.shape}")
         print(f"Number of features: {len(feature_columns)}")

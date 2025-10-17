@@ -36,7 +36,7 @@ class DataManager:
         # 数据文件路径配置
         self.file_paths = {
             "raw_klines": os.path.join(self.raw_dir, "crypto_klines_data.csv"),
-            "processed_features": os.path.join(self.processed_dir, "features_crypto_data.csv"),
+            "processed_features": os.path.join(self.processed_dir, "enhanced_features_crypto_data.csv"),
             "data_metadata": os.path.join(self.data_dir, "data_metadata.json")
         }
     
@@ -84,7 +84,7 @@ class DataManager:
             logger.error(f"保存原始数据失败: {e}")
             raise
     
-    def save_processed_data(self, df: pd.DataFrame, filename: str = "features_crypto_data.csv") -> str:
+    def save_processed_data(self, df: pd.DataFrame, filename: str = "enhanced_features_crypto_data.csv") -> str:
         """
         保存处理后的数据
         
@@ -146,7 +146,7 @@ class DataManager:
             logger.error(f"加载原始数据失败: {e}")
             raise
     
-    def load_processed_data(self, filename: str = "features_crypto_data.csv") -> pd.DataFrame:
+    def load_processed_data(self, filename: str = "enhanced_features_crypto_data.csv") -> pd.DataFrame:
         """
         加载处理后的数据
         

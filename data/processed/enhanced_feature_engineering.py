@@ -250,9 +250,8 @@ class EnhancedFeatureEngineering:
         
         # Trend strength
         for window in [12, 24, 48, 168]:
-            price_series = df['close'].rolling(window)
-            time_series = pd.Series(range(len(df)))
-            df[f'trend_strength_{window}'] = price_series.corr(time_series.rolling(window))
+            time_index = pd.Series(range(len(df)))
+            df[f'trend_strength_{window}'] = df['close'].rolling(window).corr(time_index)
         
         # Momentum oscillators
         df['price_oscillator'] = (df['EMA_10'] - df['EMA_20']) / df['EMA_20']
@@ -400,8 +399,8 @@ class EnhancedFeatureEngineering:
             )
         
         # Price-volume correlation
-        df['price_volume_corr_24'] = df['close'].rolling(24).corr(df['volume'].rolling(24))
-        df['return_volume_corr_24'] = df['log_return'].rolling(24).corr(df['volume_return'].rolling(24))
+        df['price_volume_corr_24'] = df['close'].rolling(24).corr(df['volume'])
+        df['return_volume_corr_24'] = df['log_return'].rolling(24).corr(df['volume_return'])
         
         return df
     
@@ -442,8 +441,8 @@ def main():
     """Main function for testing feature engineering."""
     
     # Configuration
-    INPUT_CSV_FILE = "../data/raw/data/crypto_klines_data.csv"
-    OUTPUT_CSV_FILE = "../data/enhanced_features_crypto_data.csv"
+    INPUT_CSV_FILE = "../raw/data/crypto_klines_data.csv"
+    OUTPUT_CSV_FILE = "../enhanced_features_crypto_data.csv"
     
     print(f"Loading data from {INPUT_CSV_FILE}...")
     try:
@@ -480,7 +479,7 @@ def main():
     }
     
     import json
-    with open("../data/enhanced_feature_info.json", 'w') as f:
+    with open("../enhanced_feature_info.json", 'w') as f:
         json.dump(feature_info, f, indent=2)
     
     print("✅ Feature information saved!")

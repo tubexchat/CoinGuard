@@ -109,11 +109,11 @@ def run_tests():
 def show_status():
     """显示项目状态"""
     print("=== CoinGuard 项目状态 ===")
-    
+
     # 检查数据文件
     data_files = {
-        "原始数据": "data/raw/crypto_klines_data.csv",
-        "特征数据": "data/processed/features_crypto_data.csv"
+        "原始数据": "data/raw/data/crypto_klines_data.csv",
+        "特征数据": "data/enhanced_features_crypto_data.csv"
     }
     
     for name, path in data_files.items():
