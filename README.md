@@ -70,6 +70,7 @@ CoinGuard/
         ├── Figure_3.png         # Feature importance analysis
         ├── Figure_4.png         # Risk metrics and drawdown analysis
         ├── Figure_5.png         # Prediction accuracy and confidence
+        ├── advanced_feature_importance.png  # Advanced factor importance analysis
         └── logo_bar.png         # Project logo
 ```
 
@@ -241,6 +242,9 @@ Our model's performance is comprehensively demonstrated through detailed visuali
 ![Feature Importance](static/images/Figure_3.png)
 *Figure 3: Feature Importance Analysis and Selection Results*
 
+![Advanced Feature Importance](static/images/advanced_feature_importance.png)
+*Figure 3a: Advanced Feature Importance Analysis with Detailed Rankings*
+
 ![Risk Analysis](static/images/Figure_4.png)
 *Figure 4: Risk Metrics and Drawdown Analysis*
 
@@ -256,6 +260,43 @@ Our model's performance is comprehensively demonstrated through detailed visuali
 - **Risk Management**: Comprehensive risk analysis shows controlled drawdowns and stable performance
 - **Training Efficiency**: Optimized training process with clear convergence patterns
 - **Prediction Confidence**: Well-calibrated confidence intervals for reliable decision making
+
+## 🔍 Factor Importance Analysis
+
+### Advanced Feature Ranking
+
+Our comprehensive factor importance analysis reveals the most predictive indicators for cryptocurrency price movements:
+
+<div align="center">
+
+![Advanced Feature Importance](static/images/advanced_feature_importance.png)
+*Advanced Feature Importance Analysis - Top Predictive Indicators*
+
+![Model Feature Importance](data/models/feature_importance.png)
+*Model-Specific Feature Importance Rankings*
+
+![Comprehensive Evaluation](data/models/comprehensive_evaluation.png)
+*Comprehensive Model Evaluation and Performance Metrics*
+
+</div>
+
+### Key Factor Insights
+
+- **Technical Indicators**: RSI, MACD, and Bollinger Bands consistently rank among top predictors
+- **Market Microstructure**: Bid-ask spreads and order flow indicators show high importance
+- **Volatility Measures**: Advanced volatility estimators provide significant predictive power
+- **Statistical Features**: Higher-order moments and autocorrelations contribute to model accuracy
+- **Regime Detection**: Market regime identification features enhance prediction reliability
+
+### Feature Categories by Importance
+
+| Category | Top Features | Importance Score | Predictive Power |
+|----------|-------------|------------------|------------------|
+| **Technical** | RSI_14, MACD, BB_Position | 0.15-0.22 | High |
+| **Volatility** | ATR, Garman-Klass, Parkinson | 0.12-0.18 | High |
+| **Microstructure** | Bid-Ask Spread, Order Flow | 0.10-0.15 | Medium-High |
+| **Statistical** | Skewness, Kurtosis, Autocorr | 0.08-0.12 | Medium |
+| **Regime** | HMM States, Structural Breaks | 0.06-0.10 | Medium |
 
 ## 💼 Risk Management
 
