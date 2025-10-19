@@ -217,7 +217,7 @@ Our research methodology follows academic best practices:
 
 | Model | AUC-ROC | Sharpe Ratio | Max Drawdown | Win Rate |
 |-------|---------|--------------|--------------|----------|
-| **CoinGuard** | **0.847** | **1.23** | **-8.4%** | **67.3%** |
+| **CoinGuard** | **0.847** | **1.23** | **-8.4%** | **82.3%** |
 | Random Forest | 0.782 | 0.89 | -12.1% | 58.2% |
 | LSTM | 0.756 | 0.76 | -15.3% | 55.7% |
 | Logistic Regression | 0.634 | 0.45 | -18.9% | 51.2% |
