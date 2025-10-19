@@ -180,6 +180,9 @@ cython_debug/
 # Ignore directories containing user credentials, local state, and settings.
 # Learn more at https://abstra.io/docs
 .abstra/
+# 屏蔽所有的accounts.yaml
+accounts.yaml
+**/accounts.yaml
 
 # Visual Studio Code
 #  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 

@@ -64,7 +64,13 @@ CoinGuard/
 │   ├── training/                # Training guides
 │   └── README.md                # Architecture overview
 └── static/                      # Static assets
-    └── images/                  # Logos and visualizations
+    └── images/                  # Logos and model performance visualizations
+        ├── Figure_1.png         # Overall model performance metrics
+        ├── Figure_2.png         # Training progress and convergence
+        ├── Figure_3.png         # Feature importance analysis
+        ├── Figure_4.png         # Risk metrics and drawdown analysis
+        ├── Figure_5.png         # Prediction accuracy and confidence
+        └── logo_bar.png         # Project logo
 ```
 
 ## 🚀 Quick Start
@@ -217,6 +223,39 @@ Our research methodology follows academic best practices:
 | Logistic Regression | 0.634 | 0.45 | -18.9% | 51.2% |
 
 *Results based on 2-year out-of-sample testing on major cryptocurrency pairs*
+
+## 📊 Model Performance Visualization
+
+Our model's performance is comprehensively demonstrated through detailed visualizations and metrics:
+
+### Performance Charts
+
+<div align="center">
+
+![Model Performance Overview](static/images/Figure_1.png)
+*Figure 1: Overall Model Performance Metrics and Comparison*
+
+![Training Progress](static/images/Figure_2.png)
+*Figure 2: Model Training Progress and Convergence Analysis*
+
+![Feature Importance](static/images/Figure_3.png)
+*Figure 3: Feature Importance Analysis and Selection Results*
+
+![Risk Analysis](static/images/Figure_4.png)
+*Figure 4: Risk Metrics and Drawdown Analysis*
+
+![Prediction Accuracy](static/images/Figure_5.png)
+*Figure 5: Prediction Accuracy and Confidence Intervals*
+
+</div>
+
+### Key Performance Insights
+
+- **High Accuracy**: Model achieves consistent high accuracy across different market conditions
+- **Robust Feature Selection**: Advanced feature engineering identifies the most predictive indicators
+- **Risk Management**: Comprehensive risk analysis shows controlled drawdowns and stable performance
+- **Training Efficiency**: Optimized training process with clear convergence patterns
+- **Prediction Confidence**: Well-calibrated confidence intervals for reliable decision making
 
 ## 💼 Risk Management
 
