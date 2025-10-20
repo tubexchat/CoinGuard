@@ -22,6 +22,7 @@ CoinGuard is a sophisticated, research-grade machine learning framework designed
 - **Ensemble Learning**: XGBoost with advanced optimization and cross-validation
 - **Comprehensive Evaluation**: Academic-grade metrics including Sharpe ratio, Maximum Drawdown, and statistical significance tests
 - **Risk Management**: Professional backtesting framework with position sizing and risk controls
+- **Automated Trading**: Binance API integration with ML-driven trading bot
 - **Production Ready**: RESTful API, comprehensive testing, and deployment tools
 - **Research Grade**: Suitable for academic publications and financial research
 
@@ -55,6 +56,9 @@ CoinGuard/
 │   ├── main.py                  # API server
 │   ├── models/                  # Model serving
 │   └── utils/                   # API utilities
+├── tradebot/                    # Automated Trading Bot
+│   ├── ml_trading_bot.py        # Main trading bot implementation
+│   └── README.md                # Trading bot documentation
 ├── testing/                     # Comprehensive Testing
 │   ├── unit/                    # Unit tests
 │   ├── integration/             # Integration tests
@@ -132,6 +136,19 @@ python run.py api
 curl -X POST "http://localhost:8000/predict" \\
   -H "Content-Type: application/json" \\
   -d '{"symbol": "BTCUSDT", "features": [...]}'
+```
+
+### Automated Trading Bot
+
+```bash
+# List available trading accounts
+python tradebot/ml_trading_bot.py --list-accounts
+
+# Start automated trading with default settings
+python tradebot/ml_trading_bot.py
+
+# Advanced trading configuration
+python tradebot/ml_trading_bot.py --account production --amount 200 --min-confidence 0.7
 ```
 
 ## 🧠 Model Architecture
@@ -261,23 +278,6 @@ Our model's performance is comprehensively demonstrated through detailed visuali
 - **Training Efficiency**: Optimized training process with clear convergence patterns
 - **Prediction Confidence**: Well-calibrated confidence intervals for reliable decision making
 
-## 🔍 Factor Importance Analysis
-
-### Advanced Feature Ranking
-
-Our comprehensive factor importance analysis reveals the most predictive indicators for cryptocurrency price movements:
-
-<div align="center">
-
-![Advanced Feature Importance](static/images/advanced_feature_importance.png)
-*Advanced Feature Importance Analysis - Top Predictive Indicators*
-
-![Model Feature Importance](data/models/feature_importance.png)
-*Model-Specific Feature Importance Rankings*
-
-![Comprehensive Evaluation](data/models/comprehensive_evaluation.png)
-*Comprehensive Model Evaluation and Performance Metrics*
-
 </div>
 
 ### Key Factor Insights
@@ -367,6 +367,79 @@ GET /models/{model_id}/performance
 # Update model
 PUT /models/{model_id}/update
 ```
+
+## 🤖 Automated Trading Bot
+
+CoinGuard includes a sophisticated automated trading bot (`tradebot/`) that integrates with Binance API to execute trades based on ML model predictions.
+
+### Trading Bot Features
+
+- **High Liquidity Focus**: Only scans contracts with 24h trading volume ≥ 50M USDT
+- **ML-Driven Decisions**: Uses trained XGBoost models for price direction prediction
+- **Bidirectional Trading**: Supports both long and short positions based on predictions
+- **Risk Management**: Built-in position limits, confidence thresholds, and stop-loss mechanisms
+- **Multi-Account Support**: Manage multiple trading accounts with different configurations
+
+### Trading Logic
+
+1. **Contract Screening**: Filters high-liquidity contracts (≥50M USDT daily volume)
+2. **ML Prediction**: Applies trained models to predict price direction
+3. **Signal Generation**: 
+   - Prediction probability > 50% → Short position (expecting decline)
+   - Prediction probability < 50% → Long position (expecting rise)
+4. **Opportunity Selection**: Ranks opportunities by confidence × probability score
+5. **Trade Execution**: Automatically opens positions on highest-scoring opportunities
+
+### Usage
+
+```bash
+# List available trading accounts
+python tradebot/ml_trading_bot.py --list-accounts
+
+# Start trading with default account
+python tradebot/ml_trading_bot.py
+
+# Use specific account with custom parameters
+python tradebot/ml_trading_bot.py --account my-account --amount 100 --min-confidence 0.65
+
+# Advanced configuration
+python tradebot/ml_trading_bot.py \
+  --account production \
+  --amount 200 \
+  --leverage 3 \
+  --min-confidence 0.7 \
+  --max-positions 3 \
+  --min-volume 100
+```
+
+### Configuration Parameters
+
+| Parameter | Description | Default | Range |
+|-----------|-------------|---------|-------|
+| `--account` | Trading account name | First available | Any configured account |
+| `--amount` | Position size (USDT) | 100 | 10-10000 |
+| `--leverage` | Leverage multiplier | 1 | 1-20 |
+| `--min-confidence` | Minimum prediction confidence | 0.6 | 0.0-1.0 |
+| `--max-positions` | Maximum concurrent positions | 2 | 1-10 |
+| `--min-volume` | Minimum 24h volume (M USDT) | 50 | 10-1000 |
+| `--interval` | Monitoring interval (seconds) | 60 | 10-3600 |
+
+### Risk Controls
+
+- **Position Limits**: Maximum concurrent positions per account
+- **Confidence Filtering**: Only trades on high-confidence predictions
+- **Volume Requirements**: Ensures sufficient market liquidity
+- **Automatic Stop-Loss**: Built-in risk management for each position
+- **Account Isolation**: Separate risk parameters per trading account
+
+### Integration with ML Models
+
+The trading bot seamlessly integrates with CoinGuard's trained models:
+
+- **Real-time Predictions**: Uses latest model predictions for trading decisions
+- **Feature Engineering**: Automatically generates required features from market data
+- **Model Updates**: Supports hot-swapping of updated models without downtime
+- **Performance Tracking**: Monitors trading performance against model predictions
 
 ## 🧪 Testing
 

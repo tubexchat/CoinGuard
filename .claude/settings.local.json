@@ -4,7 +4,10 @@
       "Bash(source venv/bin/activate)",
       "Bash(python3:*)",
       "Bash(timeout 30 python3:*)",
-      "Bash(timeout 120 python3:*)"
+      "Bash(timeout 120 python3:*)",
+      "Bash(rm:*)",
+      "Bash(git restore:*)",
+      "Bash(python test_features.py:*)"
     ],
     "deny": [],
     "ask": []

@@ -207,56 +207,71 @@ class EnhancedFeatureEngineering:
     
     def _create_volatility_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create advanced volatility features."""
-        
+
         # Realized volatility
         for window in [6, 12, 24, 48, 168]:  # 6h, 12h, 1d, 2d, 1w
             df[f'realized_vol_{window}'] = df['log_return'].rolling(window).std() * np.sqrt(window)
             df[f'vol_of_vol_{window}'] = df[f'realized_vol_{window}'].rolling(window//2).std()
-        
+
+        # Add specific windows for compatibility (12h, 24h naming)
+        df['realized_vol_12h'] = df['realized_vol_12']
+        df['realized_vol_24h'] = df['realized_vol_24']
+
         # High-frequency volatility estimators
         # Garman-Klass estimator
-        df['gk_vol_24'] = np.sqrt(
-            0.5 * (np.log(df['high'] / df['low']) ** 2).rolling(24).mean() -
-            (2 * np.log(2) - 1) * (np.log(df['close'] / df['open']) ** 2).rolling(24).mean()
-        )
-        
+        for window in [12, 24]:
+            df[f'gk_vol_{window}'] = np.sqrt(
+                0.5 * (np.log(df['high'] / df['low']) ** 2).rolling(window).mean() -
+                (2 * np.log(2) - 1) * (np.log(df['close'] / df['open']) ** 2).rolling(window).mean()
+            )
+        df['gk_vol_12h'] = df['gk_vol_12']
+        df['gk_vol_24h'] = df['gk_vol_24']
+
         # Parkinson estimator
-        df['parkinson_vol_24'] = np.sqrt(
-            (1 / (4 * np.log(2))) * (np.log(df['high'] / df['low']) ** 2).rolling(24).mean()
-        )
-        
+        for window in [12, 24]:
+            df[f'parkinson_vol_{window}'] = np.sqrt(
+                (1 / (4 * np.log(2))) * (np.log(df['high'] / df['low']) ** 2).rolling(window).mean()
+            )
+        df['parkinson_vol_12h'] = df['parkinson_vol_12']
+        df['parkinson_vol_24h'] = df['parkinson_vol_24']
+
         # Rogers-Satchell estimator
         df['rs_vol_24'] = np.sqrt(
             (np.log(df['high'] / df['close']) * np.log(df['high'] / df['open']) +
              np.log(df['low'] / df['close']) * np.log(df['low'] / df['open'])).rolling(24).mean()
         )
-        
+
         # Volatility clustering
         df['vol_cluster'] = df['realized_vol_24'] / df['realized_vol_24'].rolling(168).mean()
-        
+
         return df
     
     def _create_momentum_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create momentum and trend features."""
-        
+
         # Multi-timeframe momentum
         for period in [6, 12, 24, 48, 72, 168]:
             df[f'momentum_{period}'] = df['close'] / df['close'].shift(period) - 1
             df[f'momentum_vol_adj_{period}'] = df[f'momentum_{period}'] / df[f'realized_vol_{min(period, 48)}']
-        
+
         # Momentum acceleration
         df['momentum_accel_12'] = df['momentum_12'] - df['momentum_12'].shift(6)
         df['momentum_accel_24'] = df['momentum_24'] - df['momentum_24'].shift(12)
-        
+
         # Trend strength
         for window in [12, 24, 48, 168]:
             time_index = pd.Series(range(len(df)))
             df[f'trend_strength_{window}'] = df['close'].rolling(window).corr(time_index)
-        
+
+        # Add specific windows for compatibility (12h, 24h, 48h naming)
+        df['trend_strength_12h'] = df['trend_strength_12']
+        df['trend_strength_24h'] = df['trend_strength_24']
+        df['trend_strength_48h'] = df['trend_strength_48']
+
         # Momentum oscillators
         df['price_oscillator'] = (df['EMA_10'] - df['EMA_20']) / df['EMA_20']
         df['volume_oscillator'] = (df['volume'].rolling(10).mean() - df['volume'].rolling(20).mean()) / df['volume'].rolling(20).mean()
-        
+
         return df
     
     def _create_pattern_features(self, df: pd.DataFrame) -> pd.DataFrame:
